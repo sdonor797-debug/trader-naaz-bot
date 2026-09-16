@@ -84,27 +84,28 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
     # ── Step 1: Approve the join request ──────────────────────────────────────
-    approved = False
     try:
         await join_request.approve()
-        approved = True
         logger.info(f"✅ Approved join request: {user.full_name} (ID: {user.id})")
     except Exception as e:
-        logger.error(f"❌ Error approving join request for {user.full_name} (ID: {user.id}): {e}")
+        err_msg = str(e).lower()
+        if "hide_requester_missing" in err_msg or "already" in err_msg:
+            logger.info(f"ℹ️ Join request was already handled/approved for {user.full_name} (ID: {user.id})")
+        else:
+            logger.error(f"❌ Error approving join request for {user.full_name} (ID: {user.id}): {e}")
 
     # ── Step 2: Send welcome DM to the user ───────────────────────────────────
-    if approved:
-        try:
-            await context.bot.send_message(
-                chat_id=user.id,
-                text=WELCOME_MESSAGE,
-                disable_web_page_preview=False,
-            )
-            logger.info(f"📩 Welcome message delivered to: {user.full_name} (ID: {user.id})")
-        except Exception as e:
-            logger.warning(
-                f"⚠️ Could not send welcome DM to {user.full_name} (ID: {user.id}): {e}"
-            )
+    try:
+        await context.bot.send_message(
+            chat_id=user.id,
+            text=WELCOME_MESSAGE,
+            disable_web_page_preview=False,
+        )
+        logger.info(f"📩 Welcome message delivered to: {user.full_name} (ID: {user.id})")
+    except Exception as e:
+        logger.warning(
+            f"⚠️ Could not send welcome DM to {user.full_name} (ID: {user.id}): {e}"
+        )
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
