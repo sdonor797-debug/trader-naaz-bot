@@ -1,5 +1,7 @@
 import logging
 import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ChatJoinRequestHandler, ContextTypes
@@ -17,6 +19,27 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+# ─── Health Check HTTP Server (for Render.com free web service) ───────────────
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(b"OK - Trader Naaz Join Bot is Active\n")
+
+    def log_message(self, format, *args):
+        pass  # suppress access log spam
+
+def start_health_server() -> None:
+    port = int(os.getenv("PORT", 8080))
+    try:
+        server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+        logger.info(f"🌐 Health check HTTP server listening on port {port}")
+        server.serve_forever()
+    except Exception as e:
+        logger.error(f"❌ Could not start health check server: {e}")
+
 
 # ─── Welcome message ──────────────────────────────────────────────────────────
 DEFAULT_WELCOME_MESSAGE = f"""🚀 JOIN TRADER NAAZ VIP COMPOUNDING GROUP! 🚀
@@ -97,6 +120,10 @@ def main() -> None:
     # Register handlers
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(ChatJoinRequestHandler(handle_join_request))
+
+    # Start health check server in background thread (required for Render web services)
+    health_thread = threading.Thread(target=start_health_server, daemon=True)
+    health_thread.start()
 
     logger.info("✅ Bot is running. Listening for join requests... (Press Ctrl+C to stop)")
     app.run_polling(allowed_updates=["chat_join_request", "message"])
