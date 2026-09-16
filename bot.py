@@ -8,8 +8,8 @@ from telegram.ext import Application, CommandHandler, ChatJoinRequestHandler, Co
 load_dotenv(override=False)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "@tradernaaz")
-SIGNUP_LINK = os.getenv("SIGNUP_LINK", "https://equlix.com/en/signup?lid=2945201")
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "@Naaz_Khan78")
+SIGNUP_LINK = os.getenv("SIGNUP_LINK", "https://broker-qx.pro/sign-up/?lid=1143940")
 
 # ─── Logging setup ────────────────────────────────────────────────────────────
 logging.basicConfig(
