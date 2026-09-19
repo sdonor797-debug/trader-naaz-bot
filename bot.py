@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import threading
@@ -83,7 +84,23 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"ID: {user.id} | Channel: {chat.title}"
     )
 
-    # ── Step 1: Approve the join request ──────────────────────────────────────
+    # ── Step 1: Send welcome DM using user_chat_id (BEFORE approving) ───────────
+    # Telegram allows bots to message users via user_chat_id during a join request.
+    # We must send this BEFORE approving, while Telegram's temporary conversation window is active.
+    target_chat_id = getattr(join_request, "user_chat_id", None) or user.id
+    try:
+        await context.bot.send_message(
+            chat_id=target_chat_id,
+            text=WELCOME_MESSAGE,
+            disable_web_page_preview=False,
+        )
+        logger.info(f"📩 Welcome message delivered to: {user.full_name} (chat_id: {target_chat_id})")
+    except Exception as e:
+        logger.warning(
+            f"⚠️ Could not send welcome DM to {user.full_name} (chat_id: {target_chat_id}): {e}"
+        )
+
+    # ── Step 2: Approve the join request ──────────────────────────────────────
     try:
         await join_request.approve()
         logger.info(f"✅ Approved join request: {user.full_name} (ID: {user.id})")
@@ -94,18 +111,8 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
         else:
             logger.error(f"❌ Error approving join request for {user.full_name} (ID: {user.id}): {e}")
 
-    # ── Step 2: Send welcome DM to the user ───────────────────────────────────
-    try:
-        await context.bot.send_message(
-            chat_id=user.id,
-            text=WELCOME_MESSAGE,
-            disable_web_page_preview=False,
-        )
-        logger.info(f"📩 Welcome message delivered to: {user.full_name} (ID: {user.id})")
-    except Exception as e:
-        logger.warning(
-            f"⚠️ Could not send welcome DM to {user.full_name} (ID: {user.id}): {e}"
-        )
+    # Small pause to avoid Telegram flood rate limits
+    await asyncio.sleep(0.3)
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
